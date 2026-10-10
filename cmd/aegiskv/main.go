@@ -63,7 +63,24 @@ func main() {
 	case "stats":
 		requireArgs(args, 1)
 		s := eng.Stats()
-		fmt.Printf("keys=%d seq=%d\n", s.Keys, s.Seq)
+		fmt.Printf("seq=%d mem_keys=%d mem_bytes=%d flushes=%d compactions=%d\n",
+			s.Seq, s.Keys, s.MemTableSize, s.Flushes, s.Compactions)
+		for i, lvl := range s.Levels {
+			if lvl.Tables == 0 && lvl.Bytes == 0 {
+				continue
+			}
+			fmt.Printf("  L%d tables=%d bytes=%d\n", i, lvl.Tables, lvl.Bytes)
+		}
+	case "flush":
+		requireArgs(args, 1)
+		if err := eng.Flush(); err != nil {
+			fatalf("flush: %v", err)
+		}
+	case "compact":
+		requireArgs(args, 1)
+		if err := eng.Compact(); err != nil {
+			fatalf("compact: %v", err)
+		}
 	default:
 		usage()
 		os.Exit(2)
@@ -90,6 +107,8 @@ commands:
   get <key>           retrieve a value
   delete <key>        delete a key
   scan                list all key/value pairs
-  stats               print engine statistics
+  stats               print engine and level statistics
+  flush               persist the memtable to an SSTable
+  compact             run leveled compaction
 `)
 }

@@ -26,15 +26,23 @@ func (m *MemTable) Add(seq uint64, typ byte, key, value []byte) {
 // <= snapshot). It reports false when the key is absent or the newest visible
 // version is a tombstone.
 func (m *MemTable) Get(key []byte, snapshot uint64) ([]byte, bool) {
+	v, typ, found := m.lookup(key, snapshot)
+	if !found || typ == TypeDelete {
+		return nil, false
+	}
+	return v, true
+}
+
+// lookup returns the newest version of key at or below snapshot together with
+// its record type. Unlike Get it also reports tombstones, which callers need to
+// stop a multi-level search at the newest version of a key.
+func (m *MemTable) lookup(key []byte, snapshot uint64) ([]byte, byte, bool) {
 	it := m.skl.NewIterator()
 	it.Seek(makeInternalKey(key, snapshot, TypeDelete))
 	if !it.Valid() || !bytes.Equal(userKeyOf(it.Key()), key) {
-		return nil, false
+		return nil, 0, false
 	}
-	if typeOf(it.Key()) == TypeValue {
-		return it.Value(), true
-	}
-	return nil, false
+	return it.Value(), typeOf(it.Key()), true
 }
 
 // NewIterator returns an iterator over internal keys, ordered by user key

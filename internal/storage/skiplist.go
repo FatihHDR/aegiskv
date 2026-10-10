@@ -192,3 +192,6 @@ func (it *Iterator) Key() []byte { return it.node.key }
 
 // Value returns the current value. The returned slice must not be mutated.
 func (it *Iterator) Value() []byte { return it.node.value }
+
+// Close is a no-op; it exists so *Iterator satisfies the iterator interface.
+func (it *Iterator) Close() error { return nil }
